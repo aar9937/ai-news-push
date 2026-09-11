@@ -11,7 +11,7 @@ import requests
 from google import genai
 
 KST = ZoneInfo("Asia/Seoul")
-LOOKBACK_HOURS = 36
+DEFAULT_LOOKBACK_HOURS = 36
 ARTICLES_PER_TOPIC = 10
 DEFAULT_MAX_SELECTED = 2
 GEMINI_MODEL = "gemini-3.6-flash"
@@ -32,7 +32,6 @@ BLOCK_TITLE_WORDS = [
 
 
 def load_topics() -> list[dict]:
-    """topics.json에서 관심 주제를 읽는다."""
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         topics = json.load(f)
 
@@ -50,12 +49,10 @@ def load_topics() -> list[dict]:
 
 def build_query(search_terms: list[str]) -> str:
     """
-    search_terms의 각 항목을 OR로 연결한다.
-    예: ["인천 부동산", "금정역 재개발"]
-      -> "인천 부동산" OR "금정역 재개발"
+    각 검색어를 너무 엄격한 '완전 일치 문구'로 묶지 않고 OR로 연결한다.
     """
-    cleaned = [term.strip() for term in search_terms if str(term).strip()]
-    return " OR ".join(f'"{term}"' for term in cleaned)
+    cleaned = [str(term).strip() for term in search_terms if str(term).strip()]
+    return " OR ".join(f"({term})" for term in cleaned)
 
 
 def clean_text(text: str) -> str:
@@ -76,7 +73,7 @@ def is_blocked_title(title: str) -> bool:
     return any(word in title for word in BLOCK_TITLE_WORDS)
 
 
-def get_google_news(query: str) -> list[dict]:
+def get_google_news(query: str, lookback_hours: int) -> list[dict]:
     encoded_query = urllib.parse.quote(query)
     rss_url = (
         f"https://news.google.com/rss/search?q={encoded_query}"
@@ -84,7 +81,7 @@ def get_google_news(query: str) -> list[dict]:
     )
 
     feed = feedparser.parse(rss_url)
-    cutoff = datetime.now(KST) - timedelta(hours=LOOKBACK_HOURS)
+    cutoff = datetime.now(KST) - timedelta(hours=lookback_hours)
 
     articles = []
     seen = set()
@@ -185,7 +182,6 @@ def select_with_gemini(topic: dict, articles: list[dict]) -> list[dict]:
         return []
 
     client = genai.Client(api_key=GEMINI_API_KEY)
-
     response = client.models.generate_content(
         model=GEMINI_MODEL,
         contents=build_ai_input(topic, articles),
@@ -249,22 +245,18 @@ def build_message(selected_by_topic: dict[str, list[dict]]) -> str:
         "",
     ]
 
-    total = 0
-
     for topic_name, articles in selected_by_topic.items():
-        if not articles:
-            continue
-
         parts.append(f"<b>{escape_html(topic_name)}</b>")
+
+        if not articles:
+            parts.append("• 최근 조건에 맞는 주요 뉴스 없음")
+            parts.append("")
+            continue
 
         for article in articles:
             parts.append(make_article_block(article))
-            total += 1
 
         parts.append("")
-
-    if total == 0:
-        parts.append("오늘은 조건에 맞는 주요 뉴스가 없습니다.")
 
     return "\n".join(parts).strip()
 
@@ -329,11 +321,13 @@ def main():
 
     for topic in topics:
         query = build_query(topic["search_terms"])
+        lookback_hours = int(topic.get("lookback_hours", DEFAULT_LOOKBACK_HOURS))
 
         print(f"[수집] {topic['name']}")
         print(f"  검색어: {query}")
+        print(f"  조회기간: 최근 {lookback_hours}시간")
 
-        articles = get_google_news(query)
+        articles = get_google_news(query, lookback_hours)
         print(f"  후보 {len(articles)}건")
 
         try:

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   send-news:
@@ -35,3 +35,17 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
+
+      - name: Save sent-news history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add sent_news.json
+
+          if git diff --cached --quiet; then
+            echo "No sent-news changes to commit."
+          else
+            git commit -m "Update sent news history [skip ci]"
+            git push
+          fi

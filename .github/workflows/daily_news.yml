@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -45,7 +47,12 @@ jobs:
 
           if git diff --cached --quiet; then
             echo "No sent-news changes to commit."
-          else
-            git commit -m "Update sent news history [skip ci]"
-            git push
+            exit 0
           fi
+
+          git commit -m "Update sent news history [skip ci]"
+
+          # Actions 실행 중 사용자가 main 브랜치를 수정한 경우에도
+          # 최신 변경사항 위에 sent_news 커밋을 다시 올린 뒤 push한다.
+          git pull --rebase origin main
+          git push origin HEAD:main

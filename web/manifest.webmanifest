@@ -1,0 +1,8 @@
+{
+  "name": "AI 뉴스 설정",
+  "short_name": "뉴스설정",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#111827"
+}

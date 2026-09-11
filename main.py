@@ -23,7 +23,7 @@ KEYWORDS = [
 
 ARTICLES_PER_KEYWORD = 3
 LOOKBACK_HOURS = 36
-GEMINI_MODEL = "gemini-3.7-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # GitHub Secrets에서 읽음
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]

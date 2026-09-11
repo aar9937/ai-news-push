@@ -484,6 +484,10 @@ def main():
     newly_sent = set()
 
     for topic in topics:
+        if not topic.get("enabled", True):
+            print(f"\n[건너뜀] {topic['name']} - 비활성화")
+            continue
+
         print(f"\n[수집] {topic['name']}")
 
         candidates = collect_topic_articles(

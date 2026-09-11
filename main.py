@@ -370,14 +370,13 @@ def make_article_block(article):
     )
 
     meta = source
-
     if published:
         meta += f" · {published}"
 
     return (
-        f"• {summary}\n"
-        f"  <i>{meta}</i> · "
-        f"<a href=\"{link}\">기사 보기</a>"
+        f"🔹 <b>{summary}</b>\n"
+        f"   <i>{meta}</i>\n"
+        f"   🔗 <a href=\"{link}\">기사 보기</a>"
     )
 
 
@@ -388,6 +387,8 @@ def build_message(selected_by_topic):
         "📰 <b>오늘의 맞춤 뉴스</b>",
         f"📅 {now.strftime('%Y-%m-%d %H:%M')} 기준",
         "",
+        "━━━━━━━━━━━━━━",
+        "",
     ]
 
     total = 0
@@ -396,22 +397,30 @@ def build_message(selected_by_topic):
         parts.append(
             f"<b>{escape_html(topic_name)}</b>"
         )
+        parts.append("")
 
         if not articles:
-            parts.append("• 새로운 주요 뉴스 없음")
+            parts.append("새로운 주요 뉴스 없음")
+            parts.append("")
+            parts.append("━━━━━━━━━━━━━━")
             parts.append("")
             continue
 
-        for article in articles:
+        for idx, article in enumerate(articles):
             parts.append(make_article_block(article))
             total += 1
 
+            if idx != len(articles) - 1:
+                parts.append("")
+
+        parts.append("")
+        parts.append("━━━━━━━━━━━━━━")
         parts.append("")
 
     if total == 0:
         parts.insert(
             2,
-            "현재 조건에 맞는 새로운 주요 기사가 없습니다.\n",
+            "현재 조건에 맞는 새로운 주요 기사가 없습니다."
         )
 
     return "\n".join(parts).strip()
@@ -484,10 +493,6 @@ def main():
     newly_sent = set()
 
     for topic in topics:
-        if not topic.get("enabled", True):
-            print(f"\n[건너뜀] {topic['name']} - 비활성화")
-            continue
-
         print(f"\n[수집] {topic['name']}")
 
         candidates = collect_topic_articles(

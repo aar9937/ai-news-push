@@ -2,14 +2,33 @@ name: Daily AI News Push
 
 on:
   schedule:
+    # 정기 요약
     - cron: '0 9 * * *'
       timezone: 'Asia/Seoul'
     - cron: '10 17 * * *'
       timezone: 'Asia/Seoul'
+
+    # 긴급 확인: 오전 8:37부터 밤 10:37까지 2시간 간격
+    - cron: '37 8-22/2 * * *'
+      timezone: 'Asia/Seoul'
+
   workflow_dispatch:
+    inputs:
+      mode:
+        description: '실행 모드'
+        required: false
+        default: 'digest'
+        type: choice
+        options:
+          - digest
+          - urgent
 
 permissions:
   contents: write
+
+concurrency:
+  group: ai-news-history
+  cancel-in-progress: false
 
 jobs:
   send-news:
@@ -21,6 +40,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Decide run mode
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            MODE="${{ inputs.mode }}"
+            if [ -z "$MODE" ]; then MODE="digest"; fi
+          elif [ "${{ github.event.schedule }}" = "37 8-22/2 * * *" ]; then
+            MODE="urgent"
+          else
+            MODE="digest"
+          fi
+
+          echo "RUN_MODE=$MODE" >> "$GITHUB_ENV"
+          echo "Run mode: $MODE"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,17 +63,39 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install feedparser requests google-genai
+          pip install feedparser requests google-genai openai
 
       - name: Run news bot
         env:
+          # RUN_MODE는 앞 단계에서 GITHUB_ENV로 설정되어 자동 전달됨
+
+          # 기본 AI는 Gemini. Repository Variables에 AI_PROVIDER=openai를 넣으면 OpenAI로 전환 가능
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+          # 선택사항: 등록하면 국내 뉴스가 더 풍부해짐
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+
+          # 선택사항: 인천시 OpenAPI 키
+          INCHEON_API_KEY: ${{ secrets.INCHEON_API_KEY }}
+
         run: python main.py
 
       - name: Save sent-news history
+        shell: bash
         run: |
+          if [ ! -f sent_news.json ]; then
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -51,8 +107,5 @@ jobs:
           fi
 
           git commit -m "Update sent news history [skip ci]"
-
-          # Actions 실행 중 사용자가 main 브랜치를 수정한 경우에도
-          # 최신 변경사항 위에 sent_news 커밋을 다시 올린 뒤 push한다.
           git pull --rebase origin main
           git push origin HEAD:main

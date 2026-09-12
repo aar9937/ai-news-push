@@ -1,0 +1,60 @@
+name: Investment Anomaly Watch
+
+on:
+  schedule:
+    # BTC·환율·금·미국시장까지 놓치지 않도록 매시간 17분에 검사
+    # 정각은 GitHub Actions 예약 부하가 커질 수 있어 피함
+    - cron: '17 * * * *'
+      timezone: 'Asia/Seoul'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: investment-anomaly-watch
+  cancel-in-progress: false
+
+jobs:
+  market-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "yfinance==1.7.0" pandas feedparser requests google-genai
+
+      - name: Run investment anomaly watch
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python market_watch.py
+
+      - name: Save anomaly alert history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add market_alerts.json
+
+          if git diff --cached --quiet; then
+            echo "No market-alert history changes."
+            exit 0
+          fi
+
+          git commit -m "Update market alert history [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

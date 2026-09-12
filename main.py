@@ -21,6 +21,7 @@ except Exception:
     OpenAI = None
 
 KST = ZoneInfo("Asia/Seoul")
+BOT_VERSION = "v7-clean"
 
 RUN_MODE = (os.getenv("RUN_MODE") or "digest").strip().lower()
 AI_PROVIDER = (os.getenv("AI_PROVIDER") or "gemini").strip().lower()
@@ -111,7 +112,24 @@ OFFICIAL_HARD_EXCLUDES = [
     "용역", "입찰", "우선협상", "선정결과 공고", "제안서 평가",
     "채용 공고", "인사발령", "감사결과", "연구용역",
     "중대재해사이렌", "유해·위험작업의 취업 제한",
+    "으뜸기업", "노사문화 대상", "후보사업장", "공개검증",
+    "사회적기업 인증", "인증 공고", "우수기업", "포상 공고",
 ]
+
+
+
+TOPIC_HARD_BLOCKS = {
+    "🤖 AI·IT 신제품": [
+        "아이폰", "iphone",
+        "사전예약", "예약판매", "통신 3사 할인", "통신3사 할인",
+    ],
+}
+
+
+def topic_item_blocked(topic_name, title, summary=""):
+    text = f"{title} {summary}".lower()
+    blocked = TOPIC_HARD_BLOCKS.get(topic_name, [])
+    return any(word.lower() in text for word in blocked)
 
 
 def official_item_relevant(topic_name, title, summary):
@@ -681,6 +699,16 @@ def collect_topic_articles(topic, sent_fingerprints, sent_titles):
         )
         merged.extend(incheon)
 
+    # 주제별 완전 제외 항목을 AI 평가 전에 제거
+    merged = [
+        article for article in merged
+        if not topic_item_blocked(
+            topic_name,
+            article.get("title", ""),
+            article.get("summary", ""),
+        )
+    ]
+
     return dedupe_candidates(merged)
 
 
@@ -780,6 +808,7 @@ def scoring_prompt(topic, articles, profile):
 - 예적금: 실제 가입 가능한 금리·한도·기간·마감이 있는 상품 우선. 단순 금리 전망은 낮게.
 - 행사: 아이와 갈 수 있고 인천/수도권이며 날짜·장소·비용이 구체적이면 높게. 일반 행사는 긴급으로 분류하지 않는다.
 - AI·미래산업: 실제 출시·상용화·투자·정책 확정은 높게, 막연한 전망은 낮게.
+- AI·IT 신제품: 사용자가 iPhone 출시·예약·통신사 할인 뉴스는 원하지 않으므로 iPhone 관련 소비자 출시 뉴스는 선택하지 않는다. AI 기능/서비스 자체의 중대한 변화가 핵심인 경우만 예외로 볼 수 있다.
 - 부동산: 인천·송도·금정역·서울의 실제 정책, 정비구역 지정, 분양, GTX, 거래/대출규제 변화는 높게. 칼럼은 낮게.
 - 급락·시장기회: 실제 가격 하락이 기사로 확인되고 낙폭·가격·원인이 구체적일수록 높게. 단순 전망이나 소폭 하락은 낮게. 92점 이상 긴급은 시장에서 이례적 급락으로 보도되고 실제 낙폭도 큰 경우만 사용한다.
 
@@ -1045,7 +1074,7 @@ def build_digest_message(selected_by_topic):
     now = datetime.now(KST)
 
     parts = [
-        "📰 <b>맞춤 뉴스</b>",
+        f"📰 <b>맞춤 뉴스 · {BOT_VERSION}</b>",
         f"📅 {now.strftime('%Y-%m-%d %H:%M')} 기준",
         "",
     ]

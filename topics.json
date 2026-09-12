@@ -26,8 +26,9 @@
     "rules": "사용자가 실제로 신청하거나 바로 이용해서 돈을 아낄 수 있는 혜택을 최우선으로 선별. 정부·지자체 지원금, 인천 시민 혜택, 직장인 지원, 육아 지원, 카드·통신·교통 할인, 무료·할인 행사, 쿠폰·바우처 등을 우선한다. 신청기간, 대상, 금액, 할인율, 조건, 신청방법이 구체적인 기사를 우선하고 단순 홍보성 이벤트나 구매를 과도하게 유도하는 광고성 기사는 제외.",
     "enabled": true,
     "priority": 10,
-    "min_score": 72,
-    "urgent_enabled": true
+    "min_score": 80,
+    "urgent_enabled": true,
+    "personal_only": true
   },
   {
     "name": "📉 급락·시장기회",
@@ -88,8 +89,9 @@
     "rules": "2024년생 아이를 키우는 부모에게 실제 도움이 되는 내용을 우선. 부모급여, 아동수당, 보육료, 어린이집, 아이돌봄, 예방접종, 감염병, 인천 육아지원과 무료·할인 혜택을 우선한다. 특히 신청기간·지원금액·대상 조건이 있는 정보를 먼저 고른다. 육아용품 광고와 연예인 육아 기사는 제외.",
     "enabled": true,
     "priority": 10,
-    "min_score": 72,
-    "urgent_enabled": true
+    "min_score": 80,
+    "urgent_enabled": true,
+    "personal_only": true
   },
   {
     "name": "💼 직장인·4대보험·세금",
@@ -107,12 +109,13 @@
       "근로자 할인"
     ],
     "lookback_hours": 168,
-    "max_articles": 3,
+    "max_articles": 2,
     "rules": "4대보험 직장인이 실제로 받을 수 있는 지원금·세금 절감·보험료 변화·휴가 및 근로시간 지원을 우선. 국민연금, 건강보험료, 고용보험, 연말정산, 육아휴직, 육아기 근로시간 단축 등에서 시행일, 금액, 대상, 신청조건이 구체적인 정보를 먼저 고른다.",
     "enabled": true,
     "priority": 9,
-    "min_score": 72,
-    "urgent_enabled": true
+    "min_score": 82,
+    "urgent_enabled": true,
+    "personal_only": true
   },
   {
     "name": "💰 예금·적금·금리",

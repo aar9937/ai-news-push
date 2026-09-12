@@ -1,0 +1,155 @@
+{
+  "settings": {
+    "news_lookback_hours": 24,
+    "max_news_candidates": 10,
+    "alert_cooldown_hours": 72,
+    "gemini_model": "gemini-3.6-flash",
+    "timezone": "Asia/Seoul"
+  },
+  "assets": [
+    {
+      "id": "usdkrw",
+      "name": "달러/원",
+      "ticker": "KRW=X",
+      "unit": "원",
+      "decimals": 2,
+      "news_terms": ["원달러 환율 하락 달러 약세", "달러 급락 원화 강세"],
+      "thresholds": {
+        "simple_day": 0.7,
+        "interest_day": 1.2,
+        "shock_day": 2.0,
+        "interest_5d": 2.0,
+        "shock_5d": 3.0,
+        "interest_drawdown": 3.0,
+        "min_z_drop": 0.4
+      },
+      "resend_extra_drop": 0.5
+    },
+    {
+      "id": "jpykrw",
+      "name": "엔화/원(100엔)",
+      "synthetic": "JPYKRW100",
+      "unit": "원",
+      "decimals": 2,
+      "news_terms": ["엔화 하락 엔저", "엔화 급락 엔화 약세"],
+      "thresholds": {
+        "simple_day": 0.8,
+        "interest_day": 1.5,
+        "shock_day": 2.5,
+        "interest_5d": 2.5,
+        "shock_5d": 4.0,
+        "interest_drawdown": 4.0,
+        "min_z_drop": 0.5
+      },
+      "resend_extra_drop": 0.7
+    },
+    {
+      "id": "gold",
+      "name": "금",
+      "ticker": "GC=F",
+      "unit": "USD/oz",
+      "decimals": 2,
+      "news_terms": ["국제 금값 하락", "금 가격 급락", "금값 폭락"],
+      "thresholds": {
+        "simple_day": 1.5,
+        "interest_day": 3.0,
+        "shock_day": 5.0,
+        "interest_5d": 4.0,
+        "shock_5d": 7.0,
+        "interest_drawdown": 7.0,
+        "min_z_drop": 1.0
+      },
+      "resend_extra_drop": 1.5
+    },
+    {
+      "id": "bitcoin",
+      "name": "비트코인",
+      "ticker": "BTC-USD",
+      "unit": "USD",
+      "decimals": 0,
+      "news_terms": ["비트코인 하락", "비트코인 급락", "비트코인 폭락"],
+      "thresholds": {
+        "simple_day": 4.0,
+        "interest_day": 7.0,
+        "shock_day": 12.0,
+        "interest_5d": 8.0,
+        "shock_5d": 15.0,
+        "interest_drawdown": 15.0,
+        "min_z_drop": 2.0
+      },
+      "resend_extra_drop": 3.0
+    },
+    {
+      "id": "sp500",
+      "name": "S&P 500",
+      "ticker": "^GSPC",
+      "unit": "pt",
+      "decimals": 2,
+      "news_terms": ["S&P500 하락 미국 증시", "미국 증시 급락 S&P500"],
+      "thresholds": {
+        "simple_day": 1.5,
+        "interest_day": 2.5,
+        "shock_day": 4.0,
+        "interest_5d": 4.0,
+        "shock_5d": 7.0,
+        "interest_drawdown": 8.0,
+        "min_z_drop": 1.0
+      },
+      "resend_extra_drop": 1.5
+    },
+    {
+      "id": "nasdaq",
+      "name": "나스닥 종합",
+      "ticker": "^IXIC",
+      "unit": "pt",
+      "decimals": 2,
+      "news_terms": ["나스닥 하락", "나스닥 급락 미국 증시"],
+      "thresholds": {
+        "simple_day": 1.8,
+        "interest_day": 3.0,
+        "shock_day": 5.0,
+        "interest_5d": 5.0,
+        "shock_5d": 8.0,
+        "interest_drawdown": 10.0,
+        "min_z_drop": 1.2
+      },
+      "resend_extra_drop": 1.8
+    },
+    {
+      "id": "kospi",
+      "name": "코스피",
+      "ticker": "^KS11",
+      "unit": "pt",
+      "decimals": 2,
+      "news_terms": ["코스피 하락", "코스피 급락 증시"],
+      "thresholds": {
+        "simple_day": 1.5,
+        "interest_day": 2.5,
+        "shock_day": 4.0,
+        "interest_5d": 4.0,
+        "shock_5d": 7.0,
+        "interest_drawdown": 8.0,
+        "min_z_drop": 1.0
+      },
+      "resend_extra_drop": 1.5
+    },
+    {
+      "id": "kosdaq",
+      "name": "코스닥",
+      "ticker": "^KQ11",
+      "unit": "pt",
+      "decimals": 2,
+      "news_terms": ["코스닥 하락", "코스닥 급락 증시"],
+      "thresholds": {
+        "simple_day": 2.0,
+        "interest_day": 3.5,
+        "shock_day": 5.5,
+        "interest_5d": 6.0,
+        "shock_5d": 10.0,
+        "interest_drawdown": 12.0,
+        "min_z_drop": 1.3
+      },
+      "resend_extra_drop": 2.0
+    }
+  ]
+}

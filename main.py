@@ -86,6 +86,48 @@ OFFICIAL_FEEDS = [
 ]
 
 
+# 공식기관 자료는 "공식"이라는 이유만으로 보내지 않는다.
+# 사용자 관심사와 직접 연결되는 키워드가 있어야 후보에 포함한다.
+OFFICIAL_TOPIC_KEYWORDS = {
+    "🎁 혜택·할인·지원금": [
+        "지원금", "지원사업", "보조금", "바우처", "환급", "감면",
+        "할인", "캐시백", "수당", "급여", "신청", "지급", "혜택",
+    ],
+    "👶 영유아·육아": [
+        "부모급여", "아동수당", "보육료", "어린이집", "유치원",
+        "아이돌봄", "영유아", "육아", "보육", "유보통합",
+        "예방접종", "출산", "아동", "수족구", "독감",
+    ],
+    "💼 직장인·4대보험·세금": [
+        "국민연금", "건강보험", "고용보험", "산재보험", "4대보험",
+        "연말정산", "근로소득", "소득세", "세액공제",
+        "육아휴직", "육아기", "근로시간 단축", "출산휴가",
+        "배우자 출산휴가", "실업급여", "퇴직금", "최저임금",
+        "보험료", "근로장려금", "직장인 지원", "근로자 지원",
+    ],
+}
+
+OFFICIAL_HARD_EXCLUDES = [
+    "용역", "입찰", "우선협상", "선정결과 공고", "제안서 평가",
+    "채용 공고", "인사발령", "감사결과", "연구용역",
+    "중대재해사이렌", "유해·위험작업의 취업 제한",
+]
+
+
+def official_item_relevant(topic_name, title, summary):
+    text = f"{title} {summary}".lower()
+
+    if any(word.lower() in text for word in OFFICIAL_HARD_EXCLUDES):
+        return False
+
+    keywords = OFFICIAL_TOPIC_KEYWORDS.get(topic_name)
+    if not keywords:
+        return True
+
+    return any(keyword.lower() in text for keyword in keywords)
+
+
+
 def clean_text(text):
     if not text:
         return ""
@@ -345,7 +387,7 @@ def fetch_google_news(term, lookback_hours, sent_fingerprints, sent_titles):
         results.append(make_article(
             title=title,
             source=source,
-            summary=getattr(entry, "summary", ""),
+            summary=summary,
             link=getattr(entry, "link", ""),
             published_dt=published_dt,
             matched_term=term,
@@ -364,17 +406,18 @@ def fetch_naver_news(term, lookback_hours, sent_fingerprints, sent_titles):
         return []
 
     headers = {
-        "X-Naver-Client-Id": NAVER_CLIENT_ID,
-        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
+        "X-NCP-APIGW-API-KEY-ID": NAVER_CLIENT_ID,
+        "X-NCP-APIGW-API-KEY": NAVER_CLIENT_SECRET,
     }
     params = {
         "query": term,
         "display": ARTICLES_PER_SEARCH_TERM,
         "sort": "date",
+        "format": "json",
     }
 
     r = requests.get(
-        "https://openapi.naver.com/v1/search/news.json",
+        "https://naverapihub.apigw.ntruss.com/search/v1/news",
         headers=headers,
         params=params,
         timeout=20,
@@ -418,15 +461,18 @@ def fetch_naver_news(term, lookback_hours, sent_fingerprints, sent_titles):
     return results
 
 
-def fetch_official_feed(feed_config, lookback_hours, sent_fingerprints, sent_titles):
+def fetch_official_feed(feed_config, topic_name, lookback_hours, sent_fingerprints, sent_titles):
     feed = feedparser.parse(feed_config["url"])
     cutoff = datetime.now(KST) - timedelta(hours=lookback_hours)
     results = []
 
     for entry in feed.entries[:20]:
         title = clean_text(getattr(entry, "title", ""))
+        summary = clean_text(getattr(entry, "summary", ""))
 
         if not title:
+            continue
+        if not official_item_relevant(topic_name, title, summary):
             continue
         if candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):
             continue
@@ -613,6 +659,7 @@ def collect_topic_articles(topic, sent_fingerprints, sent_titles):
         try:
             official = fetch_official_feed(
                 feed_cfg,
+                topic_name,
                 lookback_hours,
                 sent_fingerprints,
                 sent_titles,
@@ -716,6 +763,8 @@ def scoring_prompt(topic, articles, profile):
 - 정부·지자체·공공기관 공식자료는 높게.
 - 신뢰할 만한 언론은 중간 이상.
 - 출처가 불명확하거나 홍보성이 강하면 낮게.
+- 단, "공식자료"라는 이유만으로 관련성 점수를 올리면 안 된다.
+- 사용자와 직접 관련 없는 공고·용역·입찰·내부행정·산업안전 자료는 공식자료여도 30점 미만으로 평가한다.
 
 [점수 해석]
 92~100: 긴급. 놓치면 실제 손해/기회상실 가능성이 크고 빠른 행동이 필요함.
@@ -745,6 +794,7 @@ applicability는 HIGH / CHECK / GENERAL / LOW 중 하나.
 - CHECK: 소득·재산·가입기간 등 추가조건 확인 필요
 - GENERAL: 개인 자격과 무관한 일반정보
 - LOW: 현재 프로필과 맞지 않을 가능성이 큼
+- 혜택·육아·직장인 카테고리에서 GENERAL이면 원칙적으로 보내지 않을 것이므로, 실제 적용 가능성이 있을 때만 HIGH/CHECK를 사용한다.
 
 각 후보를 반드시 모두 평가해 아래 JSON만 반환하라.
 기사에 없는 숫자·조건은 만들어내지 마라.
@@ -775,26 +825,6 @@ def parse_json_response(raw):
     return json.loads(raw)
 
 
-def heuristic_score(article, topic):
-    score = 55
-
-    if article.get("is_official"):
-        score += 10
-
-    title_summary = (article["title"] + " " + article.get("summary", "")).lower()
-
-    high_words = [
-        "신청", "지원금", "할인", "마감", "선착순", "시행", "인상", "인하",
-        "부모급여", "아동수당", "육아휴직", "근로시간", "금리", "분양",
-        "정비구역", "gtx", "무료", "예약",
-    ]
-
-    score += min(20, sum(3 for w in high_words if w in title_summary))
-    score += min(10, int(topic.get("priority", 5)))
-
-    return min(score, 88)
-
-
 def score_articles(topic, articles, profile):
     if not articles:
         return []
@@ -804,8 +834,10 @@ def score_articles(topic, articles, profile):
         data = parse_json_response(raw)
         ai_items = data.get("items", [])
     except Exception as exc:
-        print(f"  [AI 평가 실패] {exc}")
-        ai_items = []
+        # AI 평가가 실패하면 잘못된 기사를 보내는 것보다
+        # 해당 카테고리를 비우는 쪽을 선택한다.
+        print(f"  [AI 평가 실패 - 전부 제외] {exc}")
+        return []
 
     by_index = {}
 
@@ -832,25 +864,17 @@ def score_articles(topic, articles, profile):
 
     result = []
 
+    # AI가 실제로 평가한 후보만 사용한다.
+    # 평가에서 누락된 후보는 자동 점수를 부여하지 않는다.
     for idx, article in enumerate(articles):
+        if idx not in by_index:
+            continue
+
         enriched = article.copy()
-
-        if idx in by_index:
-            enriched.update(by_index[idx])
-        else:
-            enriched.update({
-                "score": heuristic_score(article, topic),
-                "urgency": "NORMAL",
-                "applicability": "GENERAL",
-                "ai_summary": article["title"],
-                "why": "AI 평가 결과가 없어 기본 규칙으로 산정",
-                "action": "",
-            })
-
+        enriched.update(by_index[idx])
         result.append(enriched)
 
     return result
-
 
 def score_badge(score):
     if score >= 92:
@@ -950,10 +974,16 @@ def choose_digest(topic, scored):
     min_score = int(topic.get("min_score", DEFAULT_MIN_SCORE))
     max_articles = int(topic.get("max_articles", DEFAULT_MAX_SELECTED))
 
+    personal_only = bool(topic.get("personal_only", False))
+
     usable = [
         a for a in scored
         if int(a.get("score", 0)) >= min_score
         and a.get("applicability") != "LOW"
+        and (
+            not personal_only
+            or a.get("applicability") in {"HIGH", "CHECK"}
+        )
     ]
 
     usable.sort(
@@ -968,11 +998,17 @@ def choose_urgent(topic, scored):
     if not topic.get("urgent_enabled", False):
         return []
 
+    personal_only = bool(topic.get("personal_only", False))
+
     usable = [
         a for a in scored
         if int(a.get("score", 0)) >= URGENT_SCORE
         and a.get("urgency") == "IMMEDIATE"
         and a.get("applicability") != "LOW"
+        and (
+            not personal_only
+            or a.get("applicability") in {"HIGH", "CHECK"}
+        )
     ]
 
     usable.sort(
@@ -1032,12 +1068,6 @@ def build_digest_message(selected_by_topic):
     if total == 0:
         parts.append("새로 볼 만한 주요 뉴스가 없습니다.")
 
-    if empty_topics:
-        names = ", ".join(
-            re.sub(r"^[^가-힣A-Za-z0-9]+", "", x)
-            for x in empty_topics
-        )
-        parts.append(f"<i>새 주요 뉴스 없음: {escape_html(names)}</i>")
 
     return "\n".join(parts).strip()
 

@@ -81,6 +81,21 @@ jobs:
               1,
           )
 
+          # 제목 단계의 확정 제외 규칙 강화
+          old_block = '''BLOCK_TITLE_WORDS = [
+              "협찬",
+              "광고",
+              "브랜드 캠페인",
+          ]'''
+          new_block = '''BLOCK_TITLE_WORDS = [
+              "협찬", "광고", "브랜드 캠페인", "체험단", "공동구매",
+              "으뜸기업", "노사문화 대상", "후보사업장", "공개검증",
+              "사회적기업 인증", "인증 공고", "우수기업", "포상 공고",
+              "채용 공고", "인사발령", "연구용역", "제안서 평가",
+          ]'''
+          if old_block in s:
+              s = s.replace(old_block, new_block, 1)
+
           # 정기뉴스는 최종 후보 단계에서 발행시각이 확인된 최근 24시간 기사만 허용
           old = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
               merged = [
@@ -97,7 +112,8 @@ jobs:
           new = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
               merged = [
                   article for article in merged
-                  if not topic_item_blocked(
+                  if not is_blocked_title(article.get("title", ""))
+                  and not topic_item_blocked(
                       topic_name,
                       article.get("title", ""),
                       article.get("summary", ""),

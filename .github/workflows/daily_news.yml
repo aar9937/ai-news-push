@@ -2,13 +2,10 @@ name: Daily AI News Push
 
 on:
   schedule:
-    # 정기 요약
     - cron: '0 9 * * *'
       timezone: 'Asia/Seoul'
     - cron: '10 17 * * *'
       timezone: 'Asia/Seoul'
-
-    # 긴급 확인: 오전 8:37부터 밤 10:37까지 2시간 간격
     - cron: '37 8-22/2 * * *'
       timezone: 'Asia/Seoul'
 
@@ -51,7 +48,6 @@ jobs:
           else
             MODE="digest"
           fi
-
           echo "RUN_MODE=$MODE" >> "$GITHUB_ENV"
           echo "Run mode: $MODE"
 
@@ -65,7 +61,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install feedparser requests google-genai openai
 
-      - name: Apply strict digest safeguards
+      - name: Apply digest safeguards
         shell: bash
         run: |
           python - <<'PY'
@@ -74,14 +70,14 @@ jobs:
           p = Path('main.py')
           s = p.read_text(encoding='utf-8')
 
-          # Google News 수집부의 summary 미정의 오류 수정
+          # Google News summary 오류 수정
           s = s.replace(
               'summary=summary,\n            link=getattr(entry, "link", ""),',
               'summary=clean_text(getattr(entry, "summary", "")),\n            link=getattr(entry, "link", ""),',
               1,
           )
 
-          # 제목 단계의 확정 제외 규칙 강화
+          # 광고/무관 공고 하드 차단
           old_block = '''BLOCK_TITLE_WORDS = [
               "협찬",
               "광고",
@@ -96,7 +92,14 @@ jobs:
           if old_block in s:
               s = s.replace(old_block, new_block, 1)
 
-          # 정기뉴스는 최종 후보 단계에서 발행시각이 확인된 최근 24시간 기사만 허용
+          # 정기뉴스는 지난번 보낸 기사라도 최근 24시간 안이면 다시 후보로 허용.
+          # 긴급 알림만 과거 발송 이력을 이용해 중복을 막는다.
+          s = s.replace(
+              'if candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
+              'if RUN_MODE == "urgent" and candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
+          )
+
+          # 최종 후보에서 발행시각이 확인된 최근 24시간 기사만 허용
           old = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
               merged = [
                   article for article in merged
@@ -108,7 +111,6 @@ jobs:
               ]
 
               return dedupe_candidates(merged)'''
-
           new = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
               merged = [
                   article for article in merged
@@ -128,39 +130,63 @@ jobs:
                   ]
 
               return dedupe_candidates(merged)'''
-
           if old not in s:
               raise SystemExit('strict 24h patch target not found in main.py')
           s = s.replace(old, new, 1)
 
-          # 버전 표시
-          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v8-strict24"', 1)
+          # 정기뉴스에서는 중요도 점수로 기사를 탈락시키지 않는다.
+          # AI 점수는 내부 정렬에만 쓰고, LOW 판정/개인전용 조건만 제외한다.
+          old_choose = '''    usable = [
+              a for a in scored
+              if int(a.get("score", 0)) >= min_score
+              and a.get("applicability") != "LOW"
+              and (
+                  not personal_only
+                  or a.get("applicability") in {"HIGH", "CHECK"}
+              )
+          ]'''
+          new_choose = '''    usable = [
+              a for a in scored
+              if a.get("applicability") != "LOW"
+              and (
+                  not personal_only
+                  or a.get("applicability") in {"HIGH", "CHECK"}
+              )
+          ]'''
+          if old_choose not in s:
+              raise SystemExit('digest selection patch target not found in main.py')
+          s = s.replace(old_choose, new_choose, 1)
 
+          # 텔레그램에서는 중요도 숫자/배지를 표시하지 않는다.
+          old_lines = '''    lines = [
+              f"{badge} <b>중요도 {score}</b> · {app}",
+              f"• {summary}",
+              f"  <i>{meta}</i>",
+          ]'''
+          new_lines = '''    lines = [
+              f"• {summary}",
+              f"  <i>{meta}</i>",
+          ]'''
+          if old_lines not in s:
+              raise SystemExit('article display patch target not found in main.py')
+          s = s.replace(old_lines, new_lines, 1)
+
+          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v9-no-score"', 1)
           p.write_text(s, encoding='utf-8')
           PY
 
       - name: Run news bot
         env:
-          # RUN_MODE는 앞 단계에서 GITHUB_ENV로 설정되어 자동 전달됨
-
-          # 기본 AI는 Gemini. Repository Variables에 AI_PROVIDER=openai를 넣으면 OpenAI로 전환 가능
           AI_PROVIDER: ${{ vars.AI_PROVIDER }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
-          # 선택사항: 등록하면 국내 뉴스가 더 풍부해짐
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-
-          # 선택사항: 인천시 OpenAPI 키
           INCHEON_API_KEY: ${{ secrets.INCHEON_API_KEY }}
-
         run: python main.py
 
       - name: Save sent-news history
@@ -170,13 +196,9 @@ jobs:
             exit 0
           fi
 
-          # Apply strict digest safeguards 단계에서 main.py를 실행 중에만 수정한다.
-          # 이 변경은 저장소에 기록할 대상이 아니므로 원상복구한 뒤 히스토리만 커밋한다.
           git restore main.py
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git add sent_news.json
 
           if git diff --cached --quiet; then

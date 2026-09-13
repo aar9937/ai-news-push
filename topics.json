@@ -172,15 +172,16 @@
     "enabled": true,
     "name": "🤖 AI·IT 신제품",
     "search_terms": [
-      "OpenAI 업데이트",
-      "ChatGPT 업데이트",
-      "Gemini 업데이트",
-      "Google AI 업데이트",
-      "삼성 AI 업데이트",
-      "갤럭시 AI 신제품",
-      "AI 서비스 출시",
-      "AI 기능 업데이트",
-      "AI 신제품"
+      "AI",
+      "전액지원",
+      "국비교육",
+      "이공계",
+      "20대 남자",
+      "무료 교육",
+      "해외 국비",
+      "입시교육",
+      "유아 영어교육",
+      "유치부 어학연수"
     ],
     "lookback_hours": 24,
     "max_articles": 3,
@@ -201,7 +202,8 @@
       "양자컴퓨팅 상용화",
       "배터리 산업 투자",
       "우주산업 투자",
-      "드론 산업 투자"
+      "유망 투자유치",
+      "미래산업"
     ],
     "lookback_hours": 24,
     "max_articles": 3,
@@ -238,5 +240,15 @@
     "priority": 10,
     "min_score": 78,
     "urgent_enabled": true
+  },
+  {
+    "enabled": true,
+    "name": "🆕 새 카테고리",
+    "search_terms": [
+      "새 키워드"
+    ],
+    "lookback_hours": 72,
+    "max_articles": 2,
+    "rules": "사용자에게 실제 도움이 되는 최신 기사만 선별한다."
   }
 ]

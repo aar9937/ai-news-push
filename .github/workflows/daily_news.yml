@@ -170,6 +170,10 @@ jobs:
             exit 0
           fi
 
+          # Apply strict digest safeguards 단계에서 main.py를 실행 중에만 수정한다.
+          # 이 변경은 저장소에 기록할 대상이 아니므로 원상복구한 뒤 히스토리만 커밋한다.
+          git restore main.py
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 

@@ -1,6 +1,10 @@
 name: Daily AI News Push
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/daily_news.yml'
   schedule:
     - cron: '0 9 * * *'
       timezone: 'Asia/Seoul'
@@ -8,7 +12,6 @@ on:
       timezone: 'Asia/Seoul'
     - cron: '37 8-22/2 * * *'
       timezone: 'Asia/Seoul'
-
   workflow_dispatch:
     inputs:
       mode:
@@ -30,7 +33,6 @@ concurrency:
 jobs:
   send-news:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,7 +63,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install feedparser requests google-genai openai
 
-      - name: Apply digest safeguards
+      - name: Apply safe digest patch
         shell: bash
         run: |
           python - <<'PY'
@@ -70,109 +72,33 @@ jobs:
           p = Path('main.py')
           s = p.read_text(encoding='utf-8')
 
-          # Google News summary 오류 수정
           s = s.replace(
               'summary=summary,\n            link=getattr(entry, "link", ""),',
               'summary=clean_text(getattr(entry, "summary", "")),\n            link=getattr(entry, "link", ""),',
               1,
           )
 
-          # 광고/무관 공고 하드 차단
-          old_block = '''BLOCK_TITLE_WORDS = [
-              "협찬",
-              "광고",
-              "브랜드 캠페인",
-          ]'''
-          new_block = '''BLOCK_TITLE_WORDS = [
-              "협찬", "광고", "브랜드 캠페인", "체험단", "공동구매",
-              "으뜸기업", "노사문화 대상", "후보사업장", "공개검증",
-              "사회적기업 인증", "인증 공고", "우수기업", "포상 공고",
-              "채용 공고", "인사발령", "연구용역", "제안서 평가",
-          ]'''
-          if old_block in s:
-              s = s.replace(old_block, new_block, 1)
-
-          # 정기뉴스는 지난번 보낸 기사라도 최근 24시간 안이면 다시 후보로 허용.
-          # 긴급 알림만 과거 발송 이력을 이용해 중복을 막는다.
           s = s.replace(
               'if candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
               'if RUN_MODE == "urgent" and candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
           )
 
-          # 최종 후보에서 발행시각이 확인된 최근 24시간 기사만 허용
-          old = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
-              merged = [
-                  article for article in merged
-                  if not topic_item_blocked(
-                      topic_name,
-                      article.get("title", ""),
-                      article.get("summary", ""),
-                  )
-              ]
+          s = s.replace(
+              '        if int(a.get("score", 0)) >= min_score\n        and a.get("applicability") != "LOW"',
+              '        if a.get("applicability") != "LOW"',
+              1,
+          )
 
-              return dedupe_candidates(merged)'''
-          new = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
-              merged = [
-                  article for article in merged
-                  if not is_blocked_title(article.get("title", ""))
-                  and not topic_item_blocked(
-                      topic_name,
-                      article.get("title", ""),
-                      article.get("summary", ""),
-                  )
-              ]
-
-              if RUN_MODE == "digest":
-                  cutoff_ts = int((datetime.now(KST) - timedelta(hours=24)).timestamp())
-                  merged = [
-                      article for article in merged
-                      if int(article.get("published_ts", 0) or 0) >= cutoff_ts
-                  ]
-
-              return dedupe_candidates(merged)'''
-          if old not in s:
-              raise SystemExit('strict 24h patch target not found in main.py')
-          s = s.replace(old, new, 1)
-
-          # 정기뉴스에서는 중요도 점수로 기사를 탈락시키지 않는다.
-          # AI 점수는 내부 정렬에만 쓰고, LOW 판정/개인전용 조건만 제외한다.
-          old_choose = '''    usable = [
-              a for a in scored
-              if int(a.get("score", 0)) >= min_score
-              and a.get("applicability") != "LOW"
-              and (
-                  not personal_only
-                  or a.get("applicability") in {"HIGH", "CHECK"}
-              )
-          ]'''
-          new_choose = '''    usable = [
-              a for a in scored
-              if a.get("applicability") != "LOW"
-              and (
-                  not personal_only
-                  or a.get("applicability") in {"HIGH", "CHECK"}
-              )
-          ]'''
-          if old_choose not in s:
-              raise SystemExit('digest selection patch target not found in main.py')
-          s = s.replace(old_choose, new_choose, 1)
-
-          # 텔레그램에서는 중요도 숫자/배지를 표시하지 않는다.
-          old_lines = '''    lines = [
-              f"{badge} <b>중요도 {score}</b> · {app}",
-              f"• {summary}",
-              f"  <i>{meta}</i>",
-          ]'''
-          new_lines = '''    lines = [
-              f"• {summary}",
-              f"  <i>{meta}</i>",
-          ]'''
-          if old_lines not in s:
-              raise SystemExit('article display patch target not found in main.py')
-          s = s.replace(old_lines, new_lines, 1)
+          s = s.replace(
+              '        f"{badge} <b>중요도 {score}</b> · {app}",\n',
+              '',
+              1,
+          )
 
           s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v9-no-score"', 1)
+
           p.write_text(s, encoding='utf-8')
+          print('digest patch applied')
           PY
 
       - name: Run news bot

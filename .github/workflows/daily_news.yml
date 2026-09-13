@@ -65,6 +65,64 @@ jobs:
           python -m pip install --upgrade pip
           pip install feedparser requests google-genai openai
 
+      - name: Apply strict digest safeguards
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('main.py')
+          s = p.read_text(encoding='utf-8')
+
+          # Google News 수집부의 summary 미정의 오류 수정
+          s = s.replace(
+              'summary=summary,\n            link=getattr(entry, "link", ""),',
+              'summary=clean_text(getattr(entry, "summary", "")),\n            link=getattr(entry, "link", ""),',
+              1,
+          )
+
+          # 정기뉴스는 최종 후보 단계에서 발행시각이 확인된 최근 24시간 기사만 허용
+          old = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
+              merged = [
+                  article for article in merged
+                  if not topic_item_blocked(
+                      topic_name,
+                      article.get("title", ""),
+                      article.get("summary", ""),
+                  )
+              ]
+
+              return dedupe_candidates(merged)'''
+
+          new = '''    # 주제별 완전 제외 항목을 AI 평가 전에 제거
+              merged = [
+                  article for article in merged
+                  if not topic_item_blocked(
+                      topic_name,
+                      article.get("title", ""),
+                      article.get("summary", ""),
+                  )
+              ]
+
+              if RUN_MODE == "digest":
+                  cutoff_ts = int((datetime.now(KST) - timedelta(hours=24)).timestamp())
+                  merged = [
+                      article for article in merged
+                      if int(article.get("published_ts", 0) or 0) >= cutoff_ts
+                  ]
+
+              return dedupe_candidates(merged)'''
+
+          if old not in s:
+              raise SystemExit('strict 24h patch target not found in main.py')
+          s = s.replace(old, new, 1)
+
+          # 버전 표시
+          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v8-strict24"', 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
       - name: Run news bot
         env:
           # RUN_MODE는 앞 단계에서 GITHUB_ENV로 설정되어 자동 전달됨

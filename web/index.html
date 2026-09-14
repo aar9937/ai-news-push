@@ -33,9 +33,7 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media(max-width:560px){.grid{grid-template-columns:1fr}}
     label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
-    input,textarea,select,button{
-      font:inherit
-    }
+    input,textarea,select,button{font:inherit}
     input[type=text],input[type=password],input[type=number],textarea,select{
       width:100%;border:1px solid #d1d5db;border-radius:12px;padding:11px 12px;
       background:#fff;color:var(--text);outline:none;
@@ -44,9 +42,7 @@
     textarea{min-height:128px;resize:vertical;line-height:1.5}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .grow{flex:1}
-    button{
-      border:0;border-radius:12px;padding:11px 14px;font-weight:700;cursor:pointer;
-    }
+    button{border:0;border-radius:12px;padding:11px 14px;font-weight:700;cursor:pointer}
     .primary{background:var(--accent);color:white}
     .secondary{background:#eef2ff;color:#3730a3}
     .ghost{background:#f3f4f6;color:#374151}
@@ -56,31 +52,18 @@
     .topic-title{font-size:18px;font-weight:800;flex:1}
     .switch{position:relative;width:48px;height:28px;display:inline-block}
     .switch input{display:none}
-    .slider{
-      position:absolute;inset:0;background:#d1d5db;border-radius:999px;transition:.18s;
-    }
-    .slider:before{
-      content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;
-      background:#fff;border-radius:50%;transition:.18s;box-shadow:0 2px 5px rgba(0,0,0,.2)
-    }
+    .slider{position:absolute;inset:0;background:#d1d5db;border-radius:999px;transition:.18s}
+    .slider:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s;box-shadow:0 2px 5px rgba(0,0,0,.2)}
     .switch input:checked + .slider{background:var(--accent)}
     .switch input:checked + .slider:before{transform:translateX(20px)}
     details{margin-top:10px}
     summary{cursor:pointer;color:#4b5563;font-size:14px}
     .mini{font-size:12px;color:var(--muted)}
-    .status{
-      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
-      max-width:90%;padding:11px 16px;border-radius:999px;background:#111827;color:white;
-      box-shadow:0 8px 30px rgba(0,0,0,.2);display:none;z-index:99;font-size:14px
-    }
-    .toolbar{
-      position:sticky;top:0;z-index:10;background:rgba(245,247,251,.92);
-      backdrop-filter:blur(10px);padding:10px 0 8px;margin-bottom:8px
-    }
+    .status{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:90%;padding:11px 16px;border-radius:999px;background:#111827;color:white;box-shadow:0 8px 30px rgba(0,0,0,.2);display:none;z-index:99;font-size:14px}
+    .toolbar{position:sticky;top:0;z-index:10;background:rgba(245,247,251,.92);backdrop-filter:blur(10px);padding:10px 0 8px;margin-bottom:8px}
     .toolbar .row{justify-content:space-between}
     .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:12px;font-weight:700}
     .secret-note{font-size:12px;color:#6b7280;margin-top:8px;line-height:1.5}
-    .sep{height:1px;background:var(--line);margin:14px 0}
   </style>
 </head>
 <body>
@@ -90,51 +73,24 @@
 
   <section class="panel">
     <div class="grid">
-      <div>
-        <label>GitHub 저장소</label>
-        <input id="repo" type="text" value="aar9937/ai-news-push">
-      </div>
-      <div>
-        <label>브랜치</label>
-        <input id="branch" type="text" value="main">
-      </div>
+      <div><label>GitHub 저장소</label><input id="repo" type="text" value="aar9937/ai-news-push"></div>
+      <div><label>브랜치</label><input id="branch" type="text" value="main"></div>
     </div>
     <div style="height:10px"></div>
     <label>GitHub Fine-grained Token</label>
     <input id="token" type="password" placeholder="github_pat_...">
-    <div class="row" style="margin-top:8px">
-      <label style="margin:0"><input id="remember" type="checkbox"> 이 기기에 토큰 기억</label>
-    </div>
-    <div class="secret-note">
-      토큰은 이 페이지에서 GitHub로 직접 전송됩니다. 서버에는 저장하지 않습니다.
-      권한은 <b>ai-news-push 저장소만</b> 선택하고 Contents: Read and write를 권장합니다.
-      아래 ‘지금 뉴스 받기’ 기능까지 쓰려면 Actions: Read and write도 추가하세요.
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button class="primary" id="loadBtn">설정 불러오기</button>
-      <button class="ghost" id="logoutBtn">토큰 지우기</button>
-    </div>
+    <div class="row" style="margin-top:8px"><label style="margin:0"><input id="remember" type="checkbox"> 이 기기에 토큰 기억</label></div>
+    <div class="secret-note">토큰은 이 페이지에서 GitHub로 직접 전송됩니다. 서버에는 저장하지 않습니다. 권한은 <b>ai-news-push 저장소만</b> 선택하고 Contents: Read and write를 권장합니다. 아래 ‘지금 뉴스 받기’ 기능까지 쓰려면 Actions: Read and write도 추가하세요.</div>
+    <div class="row" style="margin-top:12px"><button class="primary" id="loadBtn">설정 불러오기</button><button class="ghost" id="logoutBtn">토큰 지우기</button></div>
   </section>
 
-  <div class="toolbar">
-    <div class="row">
-      <span class="badge">자동 발송: 오전 9:00 · 오후 5:10</span>
-      <div class="row">
-        <button class="secondary" id="addBtn">+ 카테고리</button>
-        <button class="primary" id="saveBtn" disabled>저장</button>
-      </div>
-    </div>
-  </div>
+  <div class="toolbar"><div class="row"><span class="badge">자동 발송: 오전 9:00 · 오후 5:10</span><div class="row"><button class="secondary" id="addBtn">+ 카테고리</button><button class="primary" id="saveBtn" disabled>저장</button></div></div></div>
 
   <div id="topics"></div>
 
   <section class="panel">
-    <div class="row">
-      <button class="secondary" id="testBtn" disabled>🔄 지금 뉴스 받기</button>
-    </div>
-    <div class="mini" style="margin-top:8px">
-      누르면 즉시 최근 30일에서 아직 받지 않은 유효한 뉴스를 찾아 텔레그램으로 보냅니다.
-    </div>
+    <div class="row"><button class="secondary" id="testBtn" disabled>🔄 지금 뉴스 받기</button></div>
+    <div class="mini" style="margin-top:8px">누르면 즉시 최근 30일에서 아직 받지 않은 유효한 뉴스를 찾아 텔레그램으로 보냅니다.</div>
   </section>
 </div>
 
@@ -152,89 +108,33 @@ function showStatus(msg, ok=true){
   clearTimeout(window._st);
   window._st=setTimeout(()=>el.style.display="none",3300);
 }
-
-function token(){
-  return $("token").value.trim();
-}
-function repoParts(){
-  const v=$("repo").value.trim().split("/");
-  if(v.length!==2) throw new Error("저장소는 owner/repo 형식으로 입력하세요.");
-  return {owner:v[0], repo:v[1]};
-}
-function headers(){
-  if(!token()) throw new Error("GitHub 토큰을 입력하세요.");
-  return {
-    "Accept":"application/vnd.github+json",
-    "Authorization":`Bearer ${token()}`,
-    "X-GitHub-Api-Version":"2022-11-28"
-  };
-}
-function decodeBase64Utf8(str){
-  const bin=atob(str.replace(/\n/g,""));
-  const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-function encodeBase64Utf8(str){
-  const bytes=new TextEncoder().encode(str);
-  let bin="";
-  const chunk=0x8000;
-  for(let i=0;i<bytes.length;i+=chunk){
-    bin += String.fromCharCode(...bytes.subarray(i,i+chunk));
-  }
-  return btoa(bin);
-}
-function esc(s=""){
-  return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-}
+function token(){return $("token").value.trim();}
+function repoParts(){const v=$("repo").value.trim().split("/");if(v.length!==2) throw new Error("저장소는 owner/repo 형식으로 입력하세요.");return {owner:v[0], repo:v[1]};}
+function headers(){if(!token()) throw new Error("GitHub 토큰을 입력하세요.");return {"Accept":"application/vnd.github+json","Authorization":`Bearer ${token()}`,"X-GitHub-Api-Version":"2022-11-28"};}
+function decodeBase64Utf8(str){const bin=atob(str.replace(/\n/g,""));const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder().decode(bytes);}
+function encodeBase64Utf8(str){const bytes=new TextEncoder().encode(str);let bin="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk){bin += String.fromCharCode(...bytes.subarray(i,i+chunk));}return btoa(bin);}
+function esc(s=""){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
 
 function render(){
-  const box=$("topics");
-  box.innerHTML="";
+  const box=$("topics");box.innerHTML="";
   state.topics.forEach((t,i)=>{
-    const card=document.createElement("section");
-    card.className="topic";
+    const card=document.createElement("section");card.className="topic";
     card.innerHTML=`
       <div class="topic-head">
-        <label class="switch" title="카테고리 켜기/끄기">
-          <input type="checkbox" class="enabled" ${t.enabled!==false?"checked":""}>
-          <span class="slider"></span>
-        </label>
-        <div class="topic-title">${esc(t.name || "새 카테고리")}</div>
-        <button class="danger del">삭제</button>
+        <label class="switch" title="카테고리 켜기/끄기"><input type="checkbox" class="enabled" ${t.enabled!==false?"checked":""}><span class="slider"></span></label>
+        <div class="topic-title">${esc(t.name || "새 카테고리")}</div><button class="danger del">삭제</button>
       </div>
       <div class="grid">
-        <div>
-          <label>카테고리 이름</label>
-          <input class="name" type="text" value="${esc(t.name||"")}">
-        </div>
-        <div>
-          <label>최대 기사 수</label>
-          <input class="max" type="number" min="1" max="10" value="${Number(t.max_articles||2)}">
-        </div>
+        <div><label>카테고리 이름</label><input class="name" type="text" value="${esc(t.name||"")}"></div>
+        <div><label>최대 기사 수</label><input class="max" type="number" min="1" max="10" value="${Number(t.max_articles||2)}"></div>
       </div>
       <div style="height:10px"></div>
-      <div class="grid">
-        <div>
-          <label>조회 기간</label>
-          <select class="lookback">
-            ${[
-              [24,"24시간"],[48,"2일"],[72,"3일"],[96,"4일"],[168,"7일"],[336,"14일"]
-            ].map(([v,n])=>`<option value="${v}" ${Number(t.lookback_hours||72)===v?"selected":""}>${n}</option>`).join("")}
-          </select>
-        </div>
-      </div>
+      <div class="grid"><div><label>조회 기간</label><select class="lookback">${[[24,"24시간"],[48,"2일"],[72,"3일"],[96,"4일"],[168,"7일"],[336,"14일"]].map(([v,n])=>`<option value="${v}" ${Number(t.lookback_hours||72)===v?"selected":""}>${n}</option>`).join("")}</select></div></div>
       <div style="height:10px"></div>
-      <label>검색 키워드 — 한 줄에 하나</label>
-      <textarea class="terms">${esc((t.search_terms||[]).join("\n"))}</textarea>
-      <details>
-        <summary>AI 선별 기준 수정</summary>
-        <div style="height:8px"></div>
-        <textarea class="rules">${esc(t.rules||"")}</textarea>
-      </details>
-    `;
+      <label>검색 키워드 — 한 줄에 하나</label><textarea class="terms">${esc((t.search_terms||[]).join("\n"))}</textarea>
+      <details><summary>AI 선별 기준 수정</summary><div style="height:8px"></div><textarea class="rules">${esc(t.rules||"")}</textarea></details>`;
     const sync=()=>{
-      const e=card.querySelector(".enabled").checked;
-      t.enabled=e;
+      t.enabled=card.querySelector(".enabled").checked;
       t.name=card.querySelector(".name").value.trim();
       t.max_articles=Math.max(1,Number(card.querySelector(".max").value||2));
       t.lookback_hours=Number(card.querySelector(".lookback").value||72);
@@ -243,115 +143,59 @@ function render(){
       card.querySelector(".topic-title").textContent=t.name||"새 카테고리";
     };
     card.querySelectorAll("input,textarea,select").forEach(el=>el.addEventListener("input",sync));
-    card.querySelector(".del").addEventListener("click",()=>{
-      if(confirm(`"${t.name}" 카테고리를 삭제할까요?`)){
-        state.topics.splice(i,1); render();
-      }
-    });
+    card.querySelector(".del").addEventListener("click",()=>{if(confirm(`"${t.name}" 카테고리를 삭제할까요?`)){state.topics.splice(i,1);render();}});
     box.appendChild(card);
   });
 }
 
 async function loadTopics(){
   try{
-    const {owner,repo}=repoParts();
-    const branch=$("branch").value.trim()||"main";
+    const {owner,repo}=repoParts();const branch=$("branch").value.trim()||"main";
     const url=`https://api.github.com/repos/${owner}/${repo}/contents/topics.json?ref=${encodeURIComponent(branch)}`;
     const r=await fetch(url,{headers:headers()});
     if(!r.ok) throw new Error(`불러오기 실패 (${r.status})`);
-    const data=await r.json();
-    const txt=decodeBase64Utf8(data.content);
-    state.topics=JSON.parse(txt).map(t=>({enabled:true,...t}));
-    state.sha=data.sha;
-    render();
-    $("saveBtn").disabled=false;
-    $("testBtn").disabled=false;
-    if($("remember").checked){
-      localStorage.setItem("newsGitHubToken",token());
-    } else {
-      sessionStorage.setItem("newsGitHubToken",token());
-    }
+    const data=await r.json();const txt=decodeBase64Utf8(data.content);
+    state.topics=JSON.parse(txt).map(t=>({enabled:true,...t}));state.sha=data.sha;render();
+    $("saveBtn").disabled=false;$("testBtn").disabled=false;
+    if($("remember").checked){localStorage.setItem("newsGitHubToken",token());} else {sessionStorage.setItem("newsGitHubToken",token());}
     showStatus(`설정 ${state.topics.length}개를 불러왔어요.`);
-  }catch(e){ showStatus(e.message,false); }
+  }catch(e){showStatus(e.message,false);}
 }
 
 async function saveTopics(){
   try{
     if(!state.sha) throw new Error("먼저 설정을 불러오세요.");
-    const {owner,repo}=repoParts();
-    const branch=$("branch").value.trim()||"main";
+    const {owner,repo}=repoParts();const branch=$("branch").value.trim()||"main";
     const url=`https://api.github.com/repos/${owner}/${repo}/contents/topics.json`;
-    const body={
-      message:"Update news topics from mobile settings",
-      content:encodeBase64Utf8(JSON.stringify(state.topics,null,2)),
-      sha:state.sha,
-      branch
-    };
+    const body={message:"Update news topics from mobile settings",content:encodeBase64Utf8(JSON.stringify(state.topics,null,2)),sha:state.sha,branch};
     $("saveBtn").disabled=true;
-    const r=await fetch(url,{
-      method:"PUT",headers:{...headers(),"Content-Type":"application/json"},
-      body:JSON.stringify(body)
-    });
-    const data=await r.json();
-    if(!r.ok) throw new Error(data.message||`저장 실패 (${r.status})`);
-    state.sha=data.content.sha;
-    showStatus("저장 완료. 다음 뉴스부터 반영됩니다.");
-  }catch(e){ showStatus(e.message,false); }
-  finally{$("saveBtn").disabled=false;}
+    const r=await fetch(url,{method:"PUT",headers:{...headers(),"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const data=await r.json();if(!r.ok) throw new Error(data.message||`저장 실패 (${r.status})`);
+    state.sha=data.content.sha;showStatus("저장 완료. 다음 뉴스부터 반영됩니다.");
+  }catch(e){showStatus(e.message,false);}finally{$("saveBtn").disabled=false;}
 }
 
 async function triggerWorkflow(){
   try{
-    const {owner,repo}=repoParts();
-    const branch=$("branch").value.trim()||"main";
-    const url=`https://api.github.com/repos/${owner}/${repo}/actions/workflows/manual_news.yml/dispatches`;
+    const {owner,repo}=repoParts();const branch=$("branch").value.trim()||"main";
+    const url=`https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily_news.yml/dispatches`;
     $("testBtn").disabled=true;
-    const r=await fetch(url,{
-      method:"POST",
-      headers:{...headers(),"Content-Type":"application/json"},
-      body:JSON.stringify({ref:branch})
-    });
-    if(r.status!==204){
-      let msg=`실행 요청 실패 (${r.status})`;
-      try{const d=await r.json(); msg=d.message||msg;}catch{}
-      throw new Error(msg);
-    }
+    const r=await fetch(url,{method:"POST",headers:{...headers(),"Content-Type":"application/json"},body:JSON.stringify({ref:branch})});
+    if(r.status!==204){let msg=`실행 요청 실패 (${r.status})`;try{const d=await r.json();msg=d.message||msg;}catch{}throw new Error(msg);}
     showStatus("뉴스 수집을 시작했어요. 잠시 후 텔레그램을 확인하세요.");
-  }catch(e){showStatus(e.message,false);}
-  finally{$("testBtn").disabled=false;}
+  }catch(e){showStatus(e.message,false);}finally{$("testBtn").disabled=false;}
 }
 
 $("loadBtn").addEventListener("click",loadTopics);
 $("saveBtn").addEventListener("click",saveTopics);
 $("testBtn").addEventListener("click",triggerWorkflow);
-$("addBtn").addEventListener("click",()=>{
-  state.topics.push({
-    enabled:true,name:"🆕 새 카테고리",search_terms:["새 키워드"],
-    lookback_hours:72,max_articles:2,
-    rules:"사용자에게 실제 도움이 되는 최신 기사만 선별한다."
-  });
-  render();
-});
-$("logoutBtn").addEventListener("click",()=>{
-  localStorage.removeItem("newsGitHubToken");
-  sessionStorage.removeItem("newsGitHubToken");
-  $("token").value="";
-  showStatus("저장된 토큰을 지웠어요.");
-});
-$("remember").addEventListener("change",()=>{
-  if($("remember").checked && token()) localStorage.setItem("newsGitHubToken",token());
-  if(!$("remember").checked) localStorage.removeItem("newsGitHubToken");
-});
+$("addBtn").addEventListener("click",()=>{state.topics.push({enabled:true,name:"🆕 새 카테고리",search_terms:["새 키워드"],lookback_hours:72,max_articles:2,rules:"사용자에게 실제 도움이 되는 최신 기사만 선별한다."});render();});
+$("logoutBtn").addEventListener("click",()=>{localStorage.removeItem("newsGitHubToken");sessionStorage.removeItem("newsGitHubToken");$("token").value="";showStatus("저장된 토큰을 지웠어요.");});
+$("remember").addEventListener("change",()=>{if($("remember").checked && token()) localStorage.setItem("newsGitHubToken",token());if(!$("remember").checked) localStorage.removeItem("newsGitHubToken");});
 
 const saved=localStorage.getItem("newsGitHubToken")||sessionStorage.getItem("newsGitHubToken");
-if(saved){
-  $("token").value=saved;
-  $("remember").checked=!!localStorage.getItem("newsGitHubToken");
-}
-
-if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  navigator.serviceWorker.register("sw.js").catch(()=>{});
-}
+if(saved){$("token").value=saved;$("remember").checked=!!localStorage.getItem("newsGitHubToken");}
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){navigator.serviceWorker.register("sw.js").catch(()=>{});}
 </script>
 </body>
 </html>

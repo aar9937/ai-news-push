@@ -1,4 +1,4 @@
-name: On-demand News Push
+name: On-demand News Push V2
 
 on:
   workflow_dispatch:
@@ -90,7 +90,7 @@ jobs:
           if old_loader in s:
               s = s.replace(old_loader, new_loader, 1)
 
-          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v11-on-demand"', 1)
+          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v12-on-demand"', 1)
           p.write_text(s, encoding='utf-8')
           print('on-demand monthly patch applied')
           PY

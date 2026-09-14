@@ -3,11 +3,16 @@ name: News Now
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run-news:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -25,4 +30,14 @@ jobs:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           INCHEON_API_KEY: ${{ secrets.INCHEON_API_KEY }}
-        run: python main.py
+        run: python run_news.py
+      - name: Save sent history
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f sent_news.json ]; then git add sent_news.json; fi
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update sent news history [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

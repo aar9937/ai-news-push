@@ -17,9 +17,10 @@ on:
       mode:
         description: '실행 모드'
         required: false
-        default: 'digest'
+        default: 'manual'
         type: choice
         options:
+          - manual
           - digest
           - urgent
 
@@ -44,7 +45,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MODE="${{ inputs.mode }}"
-            if [ -z "$MODE" ]; then MODE="digest"; fi
+            if [ -z "$MODE" ]; then MODE="manual"; fi
           elif [ "${{ github.event.schedule }}" = "37 8-22/2 * * *" ]; then
             MODE="urgent"
           else
@@ -80,7 +81,7 @@ jobs:
 
           s = s.replace(
               'if candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
-              'if RUN_MODE == "urgent" and candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
+              'if RUN_MODE in {"urgent", "manual"} and candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
           )
 
           s = s.replace(
@@ -107,14 +108,26 @@ jobs:
     extra_topics = load_json("extra_topics.json", [])
     if isinstance(extra_topics, list):
         topics.extend(extra_topics)
+    if RUN_MODE == "manual":
+        manual_rule = (
+            "[수동 즉시 스크랩 모드] 최근 30일(720시간) 안에서 아직 발송하지 않은 기사만 대상으로 한다. "
+            "기사 보도일이 오늘과 가깝지 않아도 현재까지 내용이 바뀌지 않은 확정 사실, 통계, 정책, 가격·거래 데이터, "
+            "일정·지원조건·개발계획처럼 지금도 유효한 정보라면 포함한다. 이후 공식 발표로 취소·변경·정정된 내용, "
+            "현재는 효력이 끝난 이벤트·마감·행사, 이미 발송한 기사와 같은 사실을 반복하는 기사는 제외한다. "
+            "오래된 기사일수록 현재도 유효하다는 근거가 제목·요약에 확인되는 경우만 선택한다. "
+        )
+        for topic in topics:
+            topic["lookback_hours"] = 720
+            topic["rules"] = manual_rule + str(topic.get("rules", ""))
     return topics'''
           if old_loader in s:
               s = s.replace(old_loader, new_loader, 1)
 
-          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v10-market-news"', 1)
+          s = s.replace('HISTORY_DAYS = 7', 'HISTORY_DAYS = 30', 1)
+          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v11-on-demand"', 1)
 
           p.write_text(s, encoding='utf-8')
-          print('digest + market-news patch applied')
+          print('digest + market-news + on-demand patch applied')
           PY
 
       - name: Run news bot

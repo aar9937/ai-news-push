@@ -1,0 +1,40 @@
+name: One-time Telegram Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one_time_telegram_test.yml'
+
+jobs:
+  send-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send one test message
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          import requests
+
+          token = os.environ['TELEGRAM_BOT_TOKEN']
+          chat_id = os.environ['TELEGRAM_CHAT_ID']
+          text = (
+              '🧪 뉴스봇 테스트\n\n'
+              '🏘️ 인천 연수구 아파트 시장 추적이 추가됐습니다.\n'
+              '• 매매가격 상승·하락\n'
+              '• 실거래가·신고가·급매\n'
+              '• 매매량 급증·급감\n'
+              '• 거래절벽·거래회복\n\n'
+              '테스트 메시지입니다.'
+          )
+          r = requests.post(
+              f'https://api.telegram.org/bot{token}/sendMessage',
+              json={'chat_id': chat_id, 'text': text},
+              timeout=30,
+          )
+          r.raise_for_status()
+          print('telegram test sent')
+          PY

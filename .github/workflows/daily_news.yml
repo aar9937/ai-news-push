@@ -95,10 +95,26 @@ jobs:
               1,
           )
 
-          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v9-no-score"', 1)
+          old_loader = '''def load_topics():
+    topics = load_json(CONFIG_FILE, [])
+    if not isinstance(topics, list) or not topics:
+        raise ValueError("topics.json에 주제가 없습니다.")
+    return topics'''
+          new_loader = '''def load_topics():
+    topics = load_json(CONFIG_FILE, [])
+    if not isinstance(topics, list) or not topics:
+        raise ValueError("topics.json에 주제가 없습니다.")
+    extra_topics = load_json("extra_topics.json", [])
+    if isinstance(extra_topics, list):
+        topics.extend(extra_topics)
+    return topics'''
+          if old_loader in s:
+              s = s.replace(old_loader, new_loader, 1)
+
+          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v10-market-news"', 1)
 
           p.write_text(s, encoding='utf-8')
-          print('digest patch applied')
+          print('digest + market-news patch applied')
           PY
 
       - name: Run news bot

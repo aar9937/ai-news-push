@@ -1,0 +1,33 @@
+name: Inspect Article Temp
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect_article_temp.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch article metadata
+        run: |
+          python - <<'PY'
+          import requests, re, html
+          url='https://n.news.naver.com/article/005/0001872706?sid=102'
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=30)
+          print('status',r.status_code)
+          print('final',r.url)
+          text=r.text
+          for pat in [r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"',r'<meta[^>]+content="([^"]+)"[^>]+property="og:title"',r'<title>(.*?)</title>']:
+              m=re.search(pat,text,re.I|re.S)
+              if m:
+                  print('TITLE:',html.unescape(re.sub('<.*?>','',m.group(1))).strip())
+                  break
+          for pat in [r'<meta[^>]+property="og:description"[^>]+content="([^"]+)"',r'<meta[^>]+content="([^"]+)"[^>]+property="og:description"']:
+              m=re.search(pat,text,re.I|re.S)
+              if m:
+                  print('DESC:',html.unescape(m.group(1)).strip()[:1000])
+                  break
+          print('snippet:',re.sub(r'\s+',' ',text)[:500])
+          PY

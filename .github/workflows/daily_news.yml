@@ -1,12 +1,10 @@
 name: Daily AI News Push
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 0 * * *'
     - cron: '10,25,40 8 * * *'
-    - cron: '37 23 * * *'
-    - cron: '37 1,3,5,7,9,11,13 * * *'
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -24,55 +22,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Decide run mode
-        shell: bash
-        run: |
-          MODE="digest"
-          SKIP_RUN="false"
-          IS_EVENING_DIGEST="false"
-          SCHEDULE="${{ github.event.schedule }}"
-
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            MODE="manual"
-          elif [ "$SCHEDULE" = "37 23 * * *" ] || [ "$SCHEDULE" = "37 1,3,5,7,9,11,13 * * *" ]; then
-            MODE="urgent"
-          elif [ "$SCHEDULE" = "10,25,40 8 * * *" ]; then
-            MODE="digest"
-            IS_EVENING_DIGEST="true"
-
-            KST_TODAY=$(TZ=Asia/Seoul date +%F)
-            LAST_EVENING=""
-            if [ -f .last_evening_digest ]; then
-              LAST_EVENING=$(tr -d '\r\n' < .last_evening_digest)
-            fi
-
-            if [ "$LAST_EVENING" = "$KST_TODAY" ]; then
-              SKIP_RUN="true"
-              echo "Evening digest already delivered for $KST_TODAY; skipping fallback run."
-            else
-              echo "Evening digest not yet confirmed for $KST_TODAY; running now."
-            fi
-          fi
-
-          echo "RUN_MODE=$MODE" >> "$GITHUB_ENV"
-          echo "SKIP_RUN=$SKIP_RUN" >> "$GITHUB_ENV"
-          echo "IS_EVENING_DIGEST=$IS_EVENING_DIGEST" >> "$GITHUB_ENV"
-          echo "Run mode: $MODE / skip: $SKIP_RUN / evening: $IS_EVENING_DIGEST"
-
       - name: Set up Python
-        if: env.SKIP_RUN != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install dependencies
-        if: env.SKIP_RUN != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install feedparser requests google-genai openai
 
-      - name: Apply safe digest and manual patch
-        if: env.SKIP_RUN != 'true'
+      - name: Patch bot for current run
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           python - <<'PY'
@@ -81,17 +43,12 @@ jobs:
 
           p = Path('main.py')
           s = p.read_text(encoding='utf-8')
-          run_mode = (os.getenv('RUN_MODE') or 'digest').strip().lower()
+          manual = os.getenv('EVENT_NAME') == 'workflow_dispatch'
 
           s = s.replace(
               'summary=summary,\n            link=getattr(entry, "link", ""),',
               'summary=clean_text(getattr(entry, "summary", "")),\n            link=getattr(entry, "link", ""),',
               1,
-          )
-
-          s = s.replace(
-              'if candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
-              'if RUN_MODE in ("urgent", "manual") and candidate_is_old_duplicate(title, sent_fingerprints, sent_titles):\n            continue',
           )
 
           s = s.replace(
@@ -119,30 +76,21 @@ jobs:
     if isinstance(extra_topics, list):
         topics.extend(extra_topics)
     if RUN_MODE == "manual":
-        manual_rule = (
-            "[수동 즉시 스크랩 모드] 최근 30일(720시간) 안에서 아직 발송하지 않은 기사만 대상으로 한다. "
-            "기사 보도일이 오늘과 가깝지 않아도 현재까지 내용이 바뀌지 않은 확정 사실, 통계, 정책, 가격·거래 데이터, "
-            "일정·지원조건·개발계획처럼 지금도 유효한 정보라면 포함한다. 이후 공식 발표로 취소·변경·정정된 내용, "
-            "현재는 효력이 끝난 이벤트·마감·행사, 이미 발송한 기사와 같은 사실을 반복하는 기사는 제외한다. "
-        )
         for topic in topics:
             topic["lookback_hours"] = 720
-            topic["rules"] = manual_rule + str(topic.get("rules", ""))
     return topics'''
           if old_loader in s:
               s = s.replace(old_loader, new_loader, 1)
 
-          if run_mode == 'manual':
+          if manual:
               s = s.replace('HISTORY_DAYS = 7', 'HISTORY_DAYS = 30', 1)
 
-          s = s.replace('BOT_VERSION = "v7-clean"', 'BOT_VERSION = "v12-unified-manual"', 1)
           p.write_text(s, encoding='utf-8')
-          print(f'digest/manual patch applied: {run_mode}')
           PY
 
       - name: Run news bot
-        if: env.SKIP_RUN != 'true'
         env:
+          RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'digest' }}
           AI_PROVIDER: ${{ vars.AI_PROVIDER }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
@@ -155,32 +103,15 @@ jobs:
           INCHEON_API_KEY: ${{ secrets.INCHEON_API_KEY }}
         run: python main.py
 
-      - name: Mark successful evening digest
-        if: env.SKIP_RUN != 'true' && env.IS_EVENING_DIGEST == 'true' && success()
-        shell: bash
-        run: |
-          TZ=Asia/Seoul date +%F > .last_evening_digest
-          echo "Evening digest marked complete for $(cat .last_evening_digest)"
-
-      - name: Save sent-news history and delivery marker
-        if: env.SKIP_RUN != 'true' && success()
+      - name: Save sent-news history
+        if: success()
         shell: bash
         run: |
           git restore main.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if [ -f sent_news.json ]; then
-            git add sent_news.json
-          fi
-          if [ -f .last_evening_digest ]; then
-            git add .last_evening_digest
-          fi
-
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-
-          git commit -m "Update news delivery state [skip ci]"
+          if [ -f sent_news.json ]; then git add sent_news.json; fi
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update sent news history [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main

@@ -3,7 +3,7 @@ name: Daily AI News Push
 on:
   schedule:
     - cron: '0 0 * * *'
-    - cron: '10 8 * * *'
+    - cron: '10,25,40 8 * * *'
     - cron: '37 23 * * *'
     - cron: '37 1,3,5,7,9,11,13 * * *'
   workflow_dispatch:
@@ -27,27 +27,54 @@ jobs:
       - name: Decide run mode
         shell: bash
         run: |
+          MODE="digest"
+          SKIP_RUN="false"
+          IS_EVENING_DIGEST="false"
+          SCHEDULE="${{ github.event.schedule }}"
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MODE="digest"
-          elif [ "${{ github.event.schedule }}" = "37 23 * * *" ] || [ "${{ github.event.schedule }}" = "37 1,3,5,7,9,11,13 * * *" ]; then
+          elif [ "$SCHEDULE" = "37 23 * * *" ] || [ "$SCHEDULE" = "37 1,3,5,7,9,11,13 * * *" ]; then
             MODE="urgent"
-          else
+          elif [ "$SCHEDULE" = "10,25,40 8 * * *" ]; then
             MODE="digest"
+            IS_EVENING_DIGEST="true"
+
+            KST_TODAY=$(TZ=Asia/Seoul date +%F)
+            LAST_EVENING=""
+            if [ -f .last_evening_digest ]; then
+              LAST_EVENING=$(tr -d '\r\n' < .last_evening_digest)
+            fi
+
+            # GitHub may delay or miss an individual scheduled event. This cron fires
+            # at 17:10, 17:25 and 17:40 KST. Once one succeeds, later runs skip.
+            if [ "$LAST_EVENING" = "$KST_TODAY" ]; then
+              SKIP_RUN="true"
+              echo "Evening digest already delivered for $KST_TODAY; skipping fallback run."
+            else
+              echo "Evening digest not yet confirmed for $KST_TODAY; running now."
+            fi
           fi
+
           echo "RUN_MODE=$MODE" >> "$GITHUB_ENV"
-          echo "Run mode: $MODE"
+          echo "SKIP_RUN=$SKIP_RUN" >> "$GITHUB_ENV"
+          echo "IS_EVENING_DIGEST=$IS_EVENING_DIGEST" >> "$GITHUB_ENV"
+          echo "Run mode: $MODE / skip: $SKIP_RUN / evening: $IS_EVENING_DIGEST"
 
       - name: Set up Python
+        if: env.SKIP_RUN != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install dependencies
+        if: env.SKIP_RUN != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install feedparser requests google-genai openai
 
       - name: Apply safe digest patch
+        if: env.SKIP_RUN != 'true'
         shell: bash
         run: |
           python - <<'PY'
@@ -101,6 +128,7 @@ jobs:
           PY
 
       - name: Run news bot
+        if: env.SKIP_RUN != 'true'
         env:
           AI_PROVIDER: ${{ vars.AI_PROVIDER }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
@@ -114,19 +142,32 @@ jobs:
           INCHEON_API_KEY: ${{ secrets.INCHEON_API_KEY }}
         run: python main.py
 
-      - name: Save sent-news history
+      - name: Mark successful evening digest
+        if: env.SKIP_RUN != 'true' && env.IS_EVENING_DIGEST == 'true' && success()
         shell: bash
         run: |
-          if [ ! -f sent_news.json ]; then
-            exit 0
-          fi
+          TZ=Asia/Seoul date +%F > .last_evening_digest
+          echo "Evening digest marked complete for $(cat .last_evening_digest)"
+
+      - name: Save sent-news history and delivery marker
+        if: env.SKIP_RUN != 'true' && success()
+        shell: bash
+        run: |
           git restore main.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sent_news.json
+
+          if [ -f sent_news.json ]; then
+            git add sent_news.json
+          fi
+          if [ -f .last_evening_digest ]; then
+            git add .last_evening_digest
+          fi
+
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Update sent news history [skip ci]"
+
+          git commit -m "Update news delivery state [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main

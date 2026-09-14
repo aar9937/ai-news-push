@@ -1,0 +1,34 @@
+name: Patch Manual News Endpoint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch_web_manual_endpoint.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch endpoint
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('web/index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('/actions/workflows/daily_news.yml/dispatches', '/actions/workflows/manual_news.yml/dispatches')
+          s = s.replace('body:JSON.stringify({ref:branch,inputs:{mode:"manual"}})', 'body:JSON.stringify({ref:branch})')
+          p.write_text(s, encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/index.html
+          git commit -m "Use dedicated on-demand workflow from mobile button"
+          git pull --rebase origin main
+          git push origin HEAD:main

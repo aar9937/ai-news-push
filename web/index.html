@@ -304,12 +304,12 @@ async function triggerWorkflow(){
   try{
     const {owner,repo}=repoParts();
     const branch=$("branch").value.trim()||"main";
-    const url=`https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily_news.yml/dispatches`;
+    const url=`https://api.github.com/repos/${owner}/${repo}/actions/workflows/manual_news.yml/dispatches`;
     $("testBtn").disabled=true;
     const r=await fetch(url,{
       method:"POST",
       headers:{...headers(),"Content-Type":"application/json"},
-      body:JSON.stringify({ref:branch,inputs:{mode:"manual"}})
+      body:JSON.stringify({ref:branch})
     });
     if(r.status!==204){
       let msg=`실행 요청 실패 (${r.status})`;

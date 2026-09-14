@@ -1,10 +1,14 @@
 name: Daily AI News Push
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
-    - cron: '10,25,40 8 * * *'
+    - cron: '0 9 * * *'
+      timezone: 'Asia/Seoul'
+    - cron: '10 17 * * *'
+      timezone: 'Asia/Seoul'
+    - cron: '25 17 * * *'
+      timezone: 'Asia/Seoul'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,6 +20,8 @@ concurrency:
 jobs:
   send-news:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,65 +38,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install feedparser requests google-genai openai
 
-      - name: Patch bot for current run
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        shell: bash
-        run: |
-          python - <<'PY'
-          import os
-          from pathlib import Path
-
-          p = Path('main.py')
-          s = p.read_text(encoding='utf-8')
-          manual = os.getenv('EVENT_NAME') == 'workflow_dispatch'
-
-          s = s.replace(
-              'summary=summary,\n            link=getattr(entry, "link", ""),',
-              'summary=clean_text(getattr(entry, "summary", "")),\n            link=getattr(entry, "link", ""),',
-              1,
-          )
-
-          s = s.replace(
-              '        if int(a.get("score", 0)) >= min_score\n        and a.get("applicability") != "LOW"',
-              '        if a.get("applicability") != "LOW"',
-              1,
-          )
-
-          s = s.replace(
-              '        f"{badge} <b>중요도 {score}</b> · {app}",\n',
-              '',
-              1,
-          )
-
-          old_loader = '''def load_topics():
-    topics = load_json(CONFIG_FILE, [])
-    if not isinstance(topics, list) or not topics:
-        raise ValueError("topics.json에 주제가 없습니다.")
-    return topics'''
-          new_loader = '''def load_topics():
-    topics = load_json(CONFIG_FILE, [])
-    if not isinstance(topics, list) or not topics:
-        raise ValueError("topics.json에 주제가 없습니다.")
-    extra_topics = load_json("extra_topics.json", [])
-    if isinstance(extra_topics, list):
-        topics.extend(extra_topics)
-    if RUN_MODE == "manual":
-        for topic in topics:
-            topic["lookback_hours"] = 720
-    return topics'''
-          if old_loader in s:
-              s = s.replace(old_loader, new_loader, 1)
-
-          if manual:
-              s = s.replace('HISTORY_DAYS = 7', 'HISTORY_DAYS = 30', 1)
-
-          p.write_text(s, encoding='utf-8')
-          PY
-
       - name: Run news bot
         env:
-          RUN_MODE: ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'digest' }}
+          RUN_MODE: digest
           AI_PROVIDER: ${{ vars.AI_PROVIDER }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
@@ -101,17 +51,19 @@ jobs:
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           INCHEON_API_KEY: ${{ secrets.INCHEON_API_KEY }}
-        run: python main.py
+        run: python run_news.py
 
       - name: Save sent-news history
-        if: success()
-        shell: bash
         run: |
-          git restore main.py
+          if [ ! -f sent_news.json ]; then
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ -f sent_news.json ]; then git add sent_news.json; fi
-          if git diff --cached --quiet; then exit 0; fi
+          git add sent_news.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
           git commit -m "Update sent news history [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main

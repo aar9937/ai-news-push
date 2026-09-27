@@ -186,6 +186,43 @@ if start >= 0 and end > start:
 '''
     s = s[:start] + naver_func + s[end:]
 
+# Remove all Gemini dependence. Deterministic local scoring/selection only.
+score_start = s.find('def score_articles(')
+score_end = s.find('\ndef score_badge(', score_start)
+if score_start >= 0 and score_end > score_start:
+    deterministic_score = '''def score_articles(topic, articles, profile):
+    if not articles:
+        return []
+    result = []
+    seen = set()
+    for article in articles:
+        title = clean_text(article.get("title", ""))
+        summary = clean_text(article.get("summary", article.get("description", "")))
+        link = article.get("link", "")
+        key = (title.lower().strip(), link.split("?")[0])
+        if not title or key in seen or is_blocked_title(title):
+            continue
+        seen.add(key)
+        text_blob = (title + " " + summary).lower()
+        if any(x in text_blob for x in ("광고", "협찬", "체험단", "구인구직", "채용공고")):
+            continue
+        # Keep source-backed, topical articles without any external AI calls.
+        enriched = article.copy()
+        enriched.update({
+            "score": 60,
+            "urgency": "NORMAL",
+            "applicability": "GENERAL",
+            "ai_summary": summary[:160] if summary else title,
+            "why": "제목·기사 요약 및 주제 일치 기준 자동 선별",
+            "action": "",
+        })
+        result.append(enriched)
+    return result
+'''
+    s = s[:score_start] + deterministic_score + s[score_end:]
+
+# Remove Gemini configuration and prevent accidental API invocation.
+s = s.replace('GEMINI_API_KEY', 'GEMINI_API_KEY_DISABLED')
 if run_mode == 'manual':
     s = s.replace('HISTORY_DAYS = 7', 'HISTORY_DAYS = 30', 1)
 

@@ -43,6 +43,34 @@ new_loader = '''def load_topics():
 if old_loader in s:
     s = s.replace(old_loader, new_loader, 1)
 
+# If Gemini quota/network fails, keep collected candidates with conservative
+# non-AI summaries rather than dropping the entire category.
+s = s.replace(
+    '''        print(f"  [AI 평가 실패 - 전부 제외] {exc}")
+        return []''',
+    '''        print(f"  [AI 평가 실패 - 기본 선별로 대체] {exc}")
+        fallback = []
+        for article in articles:
+            title = clean_text(article.get("title", ""))
+            summary = clean_text(article.get("summary", ""))
+            text_blob = f"{title} {summary}".lower()
+            # Exclude obvious promotional/recruitment/duplicative noise.
+            if not title or any(x in text_blob for x in ("보도자료 배포", "광고", "협찬", "구인", "채용공고")):
+                continue
+            item = article.copy()
+            item.update({
+                "score": 60,
+                "urgency": "NORMAL",
+                "applicability": "GENERAL",
+                "ai_summary": summary[:160] or title,
+                "why": "AI 평가 한도 초과로 원문 제목·요약 기준으로 전달",
+                "action": "",
+            })
+            fallback.append(item)
+        return fallback''',
+    1,
+)
+
 # Broaden future-industry search discovery.
 needle = '    encoded = urllib.parse.quote(term)\n    url = (\n        f"https://news.google.com/rss/search?q={encoded}"'
 replacement = '''    discovery_term = term

@@ -113,6 +113,7 @@ OFFICIAL_HARD_EXCLUDES = [
 
 
 TOPIC_HARD_BLOCKS = {
+    "🆕 신제품·신상품": ["아이폰", "iphone"],
     "🤖 AI·IT 신제품": [
         "아이폰", "iphone",
         "사전예약", "예약판매", "통신 3사 할인", "통신3사 할인",

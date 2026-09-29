@@ -100,6 +100,8 @@ OFFICIAL_TOPIC_KEYWORDS = {
     ],
   
 
+}
+
 OFFICIAL_HARD_EXCLUDES = [
     "용역", "입찰", "우선협상", "선정결과 공고", "제안서 평가",
     "채용 공고", "인사발령", "감사결과", "연구용역",

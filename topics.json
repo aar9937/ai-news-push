@@ -5,8 +5,6 @@
     "search_terms": [
       "행사",
       "혜택",
-      "신제품",
-      "출시",
       "온누리상품권",
       "인천 이음카드",
       "신용카드 혜택",
@@ -150,6 +148,12 @@
     "enabled": true,
     "name": "🤖 AI·IT 신제품",
     "search_terms": [
+      "AI 신제품 출시",
+      "AI 서비스 출시",
+      "ChatGPT 업데이트",
+      "Gemini 업데이트",
+      "갤럭시 신제품 출시",
+      "가전 신제품 출시",
       "AI",
       "전액지원",
       "국비교육",
@@ -167,6 +171,22 @@
     "priority": 9,
     "min_score": 78,
     "urgent_enabled": false
+  },
+  {
+    "enabled": true,
+    "name": "🆕 신제품·신상품",
+    "search_terms": [
+      "신제품 출시",
+      "신상품 출시",
+      "신제품 공개"
+    ],
+    "lookback_hours": 72,
+    "max_articles": 5,
+    "rules": "최근 72시간 내 실제 출시되거나 공개된 신제품·신상품 소식을 선별한다. 제품명, 출시일, 가격, 주요 기능·특징이 구체적인 기사를 우선한다. 개인 지원금 신청 자격이나 긴급성이 없어도 신제품 정보를 포함한다. 같은 제품의 반복 기사, 협찬·체험단, 채용, 출시 근거 없는 루머는 제외한다.",
+    "priority": 8,
+    "min_score": 60,
+    "urgent_enabled": false,
+    "personal_only": false
   },
   {
     "enabled": true,

@@ -1,13 +1,6 @@
 name: Daily AI News Push
 
 on:
-  schedule:
-    - cron: '0 9 * * *'
-      timezone: 'Asia/Seoul'
-    - cron: '10 17 * * *'
-      timezone: 'Asia/Seoul'
-    - cron: '25 17 * * *'
-      timezone: 'Asia/Seoul'
   workflow_dispatch:
 
 permissions:
@@ -36,16 +29,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install feedparser requests google-genai openai
+          pip install feedparser requests
 
       - name: Run news bot
         env:
           RUN_MODE: digest
-          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}

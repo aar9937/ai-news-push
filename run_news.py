@@ -112,7 +112,8 @@ if start >= 0 and end > start:
 '''
     s = s[:start] + naver_func + s[end:]
 
-# Remove all Gemini dependence. Deterministic local scoring/selection only.
+# Deterministic relevance gates: broad RSS searches are discovery only. An
+# article must also satisfy the concrete intent of its category before send.
 score_start = s.find('def score_articles(')
 score_end = s.find('\ndef score_badge(', score_start)
 if score_start >= 0 and score_end > score_start:
@@ -124,6 +125,21 @@ if score_start >= 0 and score_end > score_start:
     topic_name = clean_text(topic.get("name", ""))
     postal_topic = "한국우편사업진흥원" in topic_name
     relocation_words = ("지방이전", "지방 이전", "공공기관 이전", "2차 공공기관", "이전 대상", "이전 후보", "혁신도시", "본사 이전", "기관 이전")
+
+    # Category-specific hard gates. This prevents a search keyword that merely
+    # appears incidentally in an unrelated story from reaching Telegram.
+    market_down_topic = "급락·시장기회" in topic_name
+    deposit_topic = "예금·적금·금리" in topic_name
+    local_topic = "송도·인천" in topic_name
+    event_topic = "행사·축제·공연" in topic_name
+    down_words = ("급락", "폭락", "하락", "급변", "낙폭")
+    market_assets = ("원달러", "환율", "달러", "엔화", "금값", "금 가격", "코스피", "코스닥", "나스닥", "s&p", "비트코인", "가상자산", "유가", "wti")
+    deposit_words = ("예금", "적금", "특판", "우대금리", "수신금리", "예적금")
+    local_places = ("인천", "송도", "연수구", "미추홀구", "남동구", "부평구", "계양구", "서구", "청라", "영종", "부천", "중동")
+    local_impacts = ("gtx", "지하철", "철도", "버스", "도로", "개통", "교통", "개발", "착공", "준공", "역세권", "공공시설", "생활정책", "지원", "임차", "주거", "주택", "재개발", "재건축")
+    event_places = ("인천", "서울", "경기", "고양", "일산", "수원", "부천", "김포", "파주", "성남", "용인", "안양", "군포", "과천", "광명", "하남")
+    event_words = ("축제", "드론쇼", "불꽃", "공연", "페스티벌", "행사")
+
     for article in articles:
         title = clean_text(article.get("title", ""))
         summary = clean_text(article.get("summary", article.get("description", "")))
@@ -132,17 +148,36 @@ if score_start >= 0 and score_end > score_start:
         if not title or key in seen or is_blocked_title(title):
             continue
         seen.add(key)
-        text_blob = (title + " " + summary).lower()
+        raw_text = title + " " + summary
+        text_blob = raw_text.lower()
         if any(x in text_blob for x in ("광고", "협찬", "체험단", "구인구직", "채용공고")):
             continue
-        # This category is intentionally strict: the exact agency AND an actual
-        # relocation concept must both appear in the article text. This blocks
-        # unrelated organizations whose names merely contain '진흥원'.
         if postal_topic:
-            if "한국우편사업진흥원" not in (title + " " + summary):
+            if "한국우편사업진흥원" not in raw_text or not any(word in raw_text for word in relocation_words):
                 continue
-            if not any(word in (title + " " + summary) for word in relocation_words):
+        if market_down_topic:
+            if not any(x in text_blob for x in down_words) or not any(x in text_blob for x in market_assets):
                 continue
+        if deposit_topic:
+            # General central-bank/bond/stock-market rate commentary is not an
+            # actionable deposit/savings item.
+            if not any(x in text_blob for x in deposit_words):
+                continue
+        if local_topic:
+            # A local name alone is insufficient (e.g. an unrelated traffic
+            # safety ceremony). Require a concrete resident-impact subject too.
+            if not any(x in text_blob for x in local_places) or not any(x in text_blob for x in local_impacts):
+                continue
+            if any(x in text_blob for x in ("교통사고 예방 캠페인", "어린이보호구역 캠페인", "업무협약식", "기관장 동정")):
+                continue
+        if event_topic:
+            # Only actual upcoming/current 수도권 events; an article merely
+            # mentioning '축제' elsewhere or a corporate sponsorship is noise.
+            if not any(x in text_blob for x in event_places) or not any(x in text_blob for x in event_words):
+                continue
+            if any(x in text_blob for x in ("la한인", "미국 로스앤젤레스", "후원사로 참여", "임직원", "판로", "수출")):
+                continue
+
         enriched = article.copy()
         enriched.update({"score": 60, "urgency": "NORMAL", "applicability": "GENERAL", "ai_summary": summary[:160] if summary else title, "why": "제목·기사 요약 및 주제 일치 기준 자동 선별", "action": ""})
         result.append(enriched)

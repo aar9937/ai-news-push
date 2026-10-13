@@ -150,6 +150,9 @@ if score_start >= 0 and score_end > score_start:
         seen.add(key)
         raw_text = title + " " + summary
         text_blob = raw_text.lower()
+        # User preference: exclude baseball news, including Doosan Bears.
+        if any(term in text_blob for term in ("두산베어스", "두산 베어스", "doosan bears", "프로야구", "kbo리그", "kbo 리그", "야구선수", "야구 경기", "야구 경기", "야구단")):
+            continue
         if any(x in text_blob for x in ("광고", "협찬", "체험단", "구인구직", "채용공고")):
             continue
         if postal_topic:

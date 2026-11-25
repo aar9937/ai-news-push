@@ -155,11 +155,30 @@ if score_start >= 0 and score_end > score_start:
             continue
         if any(x in text_blob for x in ("광고", "협찬", "체험단", "구인구직", "채용공고")):
             continue
+        headline = title.lower()
+        if any(x in headline for x in ("성과공유회", "성과 공유회", "성과보고회", "성과 보고회", "우수사례 발표", "시상식", "대상 수상", "최우수상", "방문객 몰려", "김광규")):
+            continue
+        if "부동산" in topic_name:
+            policy = ("대출규제", "대출 규제", "주택담보대출", "주담대", "dsr", "ltv", "dti", "전세대출", "특례대출", "디딤돌", "버팀목", "양도세", "취득세", "토지거래허가", "규제지역", "주택공급", "임대차보호법", "가계부채", "조정대상지역", "투기과열지구", "계약갱신청구권")
+            places = local_places + ("서울", "금정역", "군포", "수도권")
+            facts = ("실거래", "거래량", "매매가격", "아파트값", "집값", "분양가", "청약", "정비구역", "재개발", "재건축", "gtx", "착공", "개통", "입주물량", "전셋값")
+            if any(x in headline for x in ("연예인", "배우", "가수", "방송인", "유튜버", "산 이유", "집 공개", "집에 울던")):
+                continue
+            if not (any(x in headline for x in policy) or (any(x in headline for x in places) and any(x in headline for x in facts))):
+                continue
+        if "유망기업·미래산업 기회" in topic_name or "미래산업·유망기술" in topic_name:
+            if any(x in headline for x in ("성과공유", "성과 공유", "협의체 출범", "스타트업 발굴", "스타트업 투자 확대", "혁신기술 협업 확대", "업무협약", "네트워킹", "간담회", "스타트업 지원", "스타트업 선정")):
+                continue
+            concrete = ("실적", "매출", "영업이익", "주가 급등", "주가 상승", "수주", "상용화", "양산", "투자 확정", "투자 결정", "공장 착공", "허가", "승인", "계약 체결", "수요 급증")
+            if not any(x in headline for x in concrete):
+                continue
+        if event_topic and any(x in headline for x in ("성료", "폐막", "매출", "방문객", "수상", "성과")):
+            continue
         if postal_topic:
             if "한국우편사업진흥원" not in raw_text or not any(word in raw_text for word in relocation_words):
                 continue
         if market_down_topic:
-            if not any(x in text_blob for x in down_words) or not any(x in text_blob for x in market_assets):
+            if not ((any(x in text_blob for x in down_words) and any(x in text_blob for x in market_assets)) or (any(x in headline for x in ("엔비디아", "nvidia")) and any(x in headline for x in ("급등", "상승", "실적", "수주")))):
                 continue
         if deposit_topic:
             # General central-bank/bond/stock-market rate commentary is not an
